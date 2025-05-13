@@ -6,7 +6,7 @@ import { authOptions } from '../../auth/[...nextauth]/options';
 import VaultModel from '@/models/PasswordRecord';
 
 export async function POST(req: NextRequest) {
-   
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email || !session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
             }
         });
     } catch (err) {
-        return NextResponse.json({ error: 'Decryption failed' }, { status: 400 });
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+        return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 }

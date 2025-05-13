@@ -3,10 +3,10 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    Box, Button, CircularProgress, Container, IconButton, TextField, Tooltip, Typography
+    Box, CircularProgress, Container, IconButton, TextField, Tooltip, Typography
 } from '@mui/material';
 
 
@@ -22,7 +22,7 @@ export default function VaultDetailPage() {
     });
     const [loading, setLoading] = useState(false);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         const masterPassword = sessionStorage.getItem("masterPassword");
         if (!masterPassword) {
@@ -49,11 +49,11 @@ export default function VaultDetailPage() {
             router.push('/vault/view');
         }
         setLoading(false);
-    };
+    }, [id, router]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const handleUpdate = async () => {
         setLoading(true);

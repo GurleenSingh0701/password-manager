@@ -5,7 +5,7 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useRouter } from 'next/navigation';
-import { signOut, useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 
 import {
     AppBar, Toolbar, Typography, IconButton, Container, Grid, Card, CardContent,
@@ -24,8 +24,6 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    const user = useSession();
-    const { data: session } = useSession();
 
     useEffect(() => {
         const fetchRecords = async () => {

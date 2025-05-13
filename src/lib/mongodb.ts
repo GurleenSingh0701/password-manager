@@ -6,27 +6,33 @@ if (!MONGODB_URI) {
     throw new Error("Please define the MONGODB_URI environment variable");
 }
 
-// Avoid multiple connections in development due to hot reload
 declare global {
-    var mongoose: {
+    // eslint-disable-next-line no-var
+    var mongooseCache: {
         conn: mongoose.Mongoose | null;
         promise: Promise<mongoose.Mongoose> | null;
+    } | undefined;
+}
+
+// Avoid creating multiple connections in development
+let cached = globalThis.mongooseCache ?? {
+    conn: null,
+    promise: null,
+};
+
+if (!cached) {
+    cached = globalThis.mongooseCache = {
+        conn: null,
+        promise: null,
     };
 }
 
-let cached = global.mongoose;
-
-if (!cached) {
-    cached = global.mongoose = { conn: null, promise: null };
-}
-console.log("MONGODB_URI", process.env.MONGODB_URI);
-console.log("MONGODB_URI", MONGODB_URI);
 async function connectDB(): Promise<mongoose.Mongoose> {
     if (cached.conn) return cached.conn;
 
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
-            dbName: "authdb", // optional: define default DB name
+            dbName: "authdb",
             bufferCommands: false,
         });
     }
