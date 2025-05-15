@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 const SignInPage: React.FC = () => {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [masterPassword, setmasterPassword] = useState('');
     const [error, setError] = useState('');
     console.log('SignInPage rendered');
     const router = useRouter();
@@ -24,7 +24,7 @@ const SignInPage: React.FC = () => {
         const result = await signIn('credentials', {
             redirect: false,
             email,
-            password,
+            masterPassword,
         });
 
         if (result?.error) {
@@ -92,13 +92,13 @@ const SignInPage: React.FC = () => {
                             margin="normal"
                             required
                             fullWidth
-                            name="password"
-                            label="Password"
-                            type="password"
-                            id="password"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            name="masterPassword"
+                            label="masterPassword"
+                            type="masterPassword"
+                            id="masterPassword"
+                            autoComplete="current-masterPassword"
+                            value={masterPassword}
+                            onChange={(e) => setmasterPassword(e.target.value)}
                         />
                         <Button
                             type="submit"

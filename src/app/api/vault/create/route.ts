@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/options'; // Adjust path if needed
+import { authOptions } from '../../auth/[...nextauth]/options';
 import connectDB from '@/lib/mongodb';
 import PasswordRecord from '@/models/PasswordRecord';
-import { deriveKey, encryptData } from '@/utils/encryption';
+import { deriveKey, encryptData, generateSalt } from '@/utils/encryption';
 import crypto from 'crypto';
-import User from '@/models/User'; // Adjust path if needed
+import User from '@/models/User';
+
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) {
@@ -21,13 +22,26 @@ export async function POST(req: NextRequest) {
 
     try {
         await connectDB();
-        const salt = crypto.randomBytes(16).toString('hex');
+
+        // 🧂 Generate key and encrypt password
+        const salt = generateSalt();
         const key = deriveKey(masterPassword, salt);
         const { encryptedData, iv, authTag } = encryptData(password, key);
-        const user = await User.findOne({ email: session.user.email });
+
+
+        // 🔐 Compute email HMAC
+        const EMAIL_SECRET = process.env.EMAIL_SECRET!;
+        const emailHmac = crypto.createHmac('sha256', EMAIL_SECRET)
+            .update(session.user.email)
+            .digest('hex');
+
+        // 🔍 Find user by emailHmac
+        const user = await User.findOne({ emailHmac });
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
+
+        // 💾 Create and save password record
         const record = await PasswordRecord.create({
             userId: user._id,
             website,

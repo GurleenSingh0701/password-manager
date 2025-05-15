@@ -16,6 +16,7 @@ interface VaultRecord {
     _id: string;
     website: string;
     username: string;
+    password: string;
     createdAt: string;
 }
 
@@ -40,6 +41,44 @@ export default function Dashboard() {
     const filtered = records?.filter((r) =>
         r.website.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    const validateMasterPassword = async (): Promise<string | null> => {
+        let masterPassword = sessionStorage.getItem('masterPassword');
+
+        if (!masterPassword) {
+            masterPassword = prompt('🔐 Enter the *same* master password you used during sign-up:')?.trim() ?? '';
+            if (!masterPassword) return null;
+
+            // Validate master password with the backend before storing it
+            const isValid = await validatePasswordWithBackend(masterPassword);
+            if (!isValid) {
+                alert('Incorrect password. Please try again.');
+                sessionStorage.removeItem('masterPassword'); // Clear any previous invalid password
+                return null;
+            }
+
+            // Store the valid password in sessionStorage
+            sessionStorage.setItem('masterPassword', masterPassword);
+        }
+
+        return masterPassword;
+    };
+
+    const validatePasswordWithBackend = async (password: string): Promise<boolean> => {
+
+        try {
+            const res = await fetch('/api/vault/validate-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ masterPassword: password }),
+            });
+
+            const data = await res.json();
+            return data.success ?? false;
+        } catch (error) {
+            return error instanceof Error ? false : true;
+        }
+    };
+
 
     return (
         <>
@@ -86,18 +125,20 @@ export default function Dashboard() {
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                         <CircularProgress />
                     </Box>
+                ) : filtered.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', mt: 4 }}>
+                        <Typography variant="h6" color="textSecondary">
+                            No passwords found. Click Create New Record to add your first password.
+                        </Typography>
+                    </Box>
                 ) : (
                     <Grid container>
                         {filtered?.map((record) => (
                             <Grid size={12} key={record._id}>
                                 <Card
-                                    onClick={() => {
-                                        let masterPassword = sessionStorage.getItem("masterPassword");
-                                        if (!masterPassword) {
-                                            masterPassword = prompt("Enter your master password:");
-                                            if (!masterPassword) return;
-                                            sessionStorage.setItem("masterPassword", masterPassword);
-                                        }
+                                    onClick={async () => {
+                                        const masterPassword = await validateMasterPassword();
+                                        if (!masterPassword) return;
                                         router.push(`/vault/view/${record._id}`);
                                     }}
                                     sx={{

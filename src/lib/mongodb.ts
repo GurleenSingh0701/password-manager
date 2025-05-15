@@ -5,7 +5,6 @@ const MONGODB_URI = process.env.MONGODB_URI as string;
 if (!MONGODB_URI) {
     throw new Error("Please define the MONGODB_URI environment variable");
 }
-
 declare global {
     // eslint-disable-next-line no-var
     var mongooseCache: {
@@ -32,7 +31,7 @@ async function connectDB(): Promise<mongoose.Mongoose> {
 
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
-            dbName: "authdb",
+            dbName: "newDB",
             bufferCommands: false,
         });
     }

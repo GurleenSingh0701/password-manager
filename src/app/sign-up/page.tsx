@@ -18,7 +18,7 @@ import {
 
 export default function RegisterPage() {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [masterPassword, setmasterPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
@@ -28,32 +28,44 @@ export default function RegisterPage() {
         setError('');
         setLoading(true);
 
-        const res = await fetch('/api/sign-up', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
+        try {
+            // Step 1: Register User
+            const res = await fetch('/api/sign-up', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, masterPassword }),
+            });
 
-        const data = await res.json();
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'Something went wrong');
+                setLoading(false);
+                return;
+            }
 
-        if (!res.ok) {
-            setError(data.error || 'Something went wrong');
+            // Step 2: Sign In the User
+            const result = await signIn('credentials', {
+                redirect: false,
+                email: email,
+                masterPassword: masterPassword,
+            });
+            if (result?.error) {
+                setError(result.error);
+                setLoading(false);
+            } else {
+                router.push('/vault/view');
+            }
+        } catch (err: Error
+            | string
+            | { message?: string }
+            | { error?: string } // Adjusted type to include error property
+            | unknown // Fallback for any other types
+            | undefined // Handle undefined case
+        ) {
+            setError('An unexpected error occurred');
+            console.error(err);
+        } finally {
             setLoading(false);
-            return;
-        }
-
-        // Sign-in after successful sign-up
-        const result = await signIn('credentials', {
-            redirect: false,
-            email,
-            password,
-        });
-
-        if (result?.error) {
-            setError(result.error);
-            setLoading(false);
-        } else {
-            router.push('/vault/view');
         }
     };
 
@@ -90,13 +102,13 @@ export default function RegisterPage() {
                         margin="normal"
                         required
                         fullWidth
-                        name="password"
-                        label="Password"
-                        type="password"
-                        id="password"
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        name="masterPassword"
+                        label="masterPassword"
+                        type="masterPassword"
+                        id="masterPassword"
+                        autoComplete="current-masterPassword"
+                        value={masterPassword}
+                        onChange={(e) => setmasterPassword(e.target.value)}
                     />
 
                     {error && (

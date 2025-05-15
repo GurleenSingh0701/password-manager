@@ -1,18 +1,23 @@
 'use client';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    Box, CircularProgress, Container, IconButton, TextField, Tooltip, Typography
+    Box, Button, CircularProgress, Container, FormControl, IconButton, InputLabel, OutlinedInput, TextField, Tooltip, Typography
 } from '@mui/material';
+import { decryptData, deriveKey } from '@/utils/encryption';
 
+import {
+    InputAdornment,
+} from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 export default function VaultDetailPage() {
     const { id } = useParams();
     const router = useRouter();
+    const [showPassword, setShowPassword] = useState(false);
 
     const [data, setData] = useState({
         website: '',
@@ -37,19 +42,31 @@ export default function VaultDetailPage() {
         });
 
         const result = await res.json();
-        if (result.decryptedPassword) {
+
+        const encryptedData = result.record.password;
+        const iv = result.record.iv;
+        const authTag = result.record.authTag;
+        const salt = result.record.salt;
+
+        const derivedKey = deriveKey(masterPassword, salt); // must match encryption-time salt
+        const decryptedPassword = decryptData(encryptedData, derivedKey, iv, authTag);
+        console.log('Decrypted Password:', decryptedPassword);
+        if (res.ok && result.record && result?.record?.password) {
+
             setData({
                 website: result.record.website,
                 username: result.record.username,
-                password: result.decryptedPassword,
+                password: decryptedPassword,
                 masterPassword: masterPassword,
             });
         } else {
-            alert('Failed to decrypt password');
+            alert('Failed to fetch or decrypt the record. Please try again.');
             router.push('/vault/view');
         }
+
         setLoading(false);
     }, [id, router]);
+
 
     useEffect(() => {
         fetchData();
@@ -133,29 +150,45 @@ export default function VaultDetailPage() {
                 margin="normal"
                 onChange={(e) => setData({ ...data, username: e.target.value })}
             />
-            <TextField
+            {/* <TextField
                 fullWidth
                 label="Password"
                 type="text"
                 value={data.password}
                 margin="normal"
                 onChange={(e) => setData({ ...data, password: e.target.value })}
-            />
+            /> */}
+            <FormControl fullWidth variant="outlined" margin="normal">
+                <InputLabel htmlFor="password-field">Password</InputLabel>
+                <OutlinedInput
+                    id="password-field"
+                    type={showPassword ? 'text' : 'password'}
+                    value={data.password}
+                    onChange={(e) => setData({ ...data, password: e.target.value })}
+                    endAdornment={
+                        <InputAdornment position="end">
+                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                            <IconButton onClick={() => navigator.clipboard.writeText(data.password)} edge="end">
+                                <ContentCopyIcon />
+                            </IconButton>
+                        </InputAdornment>
+                    }
+                    label="Password"
+                />
+            </FormControl>
             <Box mt={2} display="flex" gap={2}>
-                <Tooltip title="Copy Password">
-                    <IconButton onClick={() => navigator.clipboard.writeText(data.password)}>
-                        <ContentCopyIcon />
-                    </IconButton>
-                </Tooltip>
+
                 <Tooltip title="Save Changes">
-                    <IconButton color="primary" onClick={handleUpdate}>
-                        <SaveIcon />
-                    </IconButton>
+                    <Button variant="contained" color="primary" onClick={handleUpdate}>
+                        Save
+                    </Button>
                 </Tooltip>
                 <Tooltip title="Delete Record">
-                    <IconButton color="error" onClick={handleDelete}>
-                        <DeleteIcon />
-                    </IconButton>
+                    <Button variant="outlined" color="error" onClick={handleDelete}>
+                        Delete
+                    </Button>
                 </Tooltip>
             </Box>
         </Container>

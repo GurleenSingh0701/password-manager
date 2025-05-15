@@ -3,32 +3,42 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
 import connectDB from "@/lib/mongodb";
-
+import crypto from "crypto";
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
+                masterPassword: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
+                if (!credentials) return null;
+
                 await connectDB();
 
-                const user = await User.findOne({ email: credentials?.email });
+                const { email, masterPassword } = credentials;
 
+                // 🔒 Compute HMAC of email for lookup
+                const emailHmac = crypto.createHmac('sha256', process.env.EMAIL_SECRET!)
+                    .update(email)
+                    .digest('hex');
+
+                // 🔍 Find user by email HMAC
+                const user = await User.findOne({ emailHmac });
                 if (!user) {
-                    throw new Error("No user found with this email");
+                    throw new Error('Invalid email or password');
                 }
 
-                const isValid = await bcrypt.compare(credentials!.password, user.password);
-
-                if (!isValid) {
-                    throw new Error("Invalid password");
+                const isPasswordValid = await bcrypt.compare(masterPassword, user.masterPassword);
+                if (!isPasswordValid) {
+                    throw new Error('Invalid email or password');
                 }
 
-                // Return safe user object (only id and email)
-                return { id: user._id.toString(), email: user.email };
+                return {
+                    id: user._id.toString(),
+                    email: email,  // decrypted or raw as needed
+                };
             },
         }),
     ],
